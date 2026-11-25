@@ -154,8 +154,6 @@ microservices-02-principles/
 ### `docker-compose.yml`
 
 ```yaml
-version: '3.8'
-
 services:
   nginx:
     image: nginx:1.25-alpine
@@ -446,81 +444,35 @@ docker compose up -d
 docker compose ps
 ```
 
-Ожидаемый вывод:
-
-```
-NAME                                     IMAGE                                  STATUS          PORTS
-microservices-02-principles-minio-1      pgsty/silo:latest                      Up              9000/tcp
-microservices-02-principles-nginx-1      nginx:1.25-alpine                      Up              0.0.0.0:8081->80/tcp, [::]:8081->80/tcp
-microservices-02-principles-security-1   microservices-02-principles-security   Up              80/tcp
-microservices-02-principles-uploader-1   microservices-02-principles-uploader   Up              80/tcp
-```
+![Alt text](images/1.png)
 
 ### Проверка (реальные результаты)
 
 #### 1. Получение токена (анонимный доступ)
 
-```bash
-curl -X POST -H 'Content-Type: application/json' \
-     -d '{"login":"bob","password":"qwe123"}' \
-     http://localhost:8081/v1/token
-```
-
-Ответ:
-
-```json
-{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJib2IiLCJleHAiOjE3OTU1MTEzNjF9.6sUFFwVLJ2NTrrHhM27wkp_sK-5s5uqGAVpy0KF2LrE"}
-```
+![Alt text](images/2.png)
 
 #### 2. Загрузка файла (защищённый, требуется токен)
 
-```bash
-curl -X POST \
-     -H 'Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJib2IifQ.hiMVLmssoTsy1MqbmIoviDeFPvo-nCd92d4UFiN2O2I' \
-     -H 'Content-Type: application/octet-stream' \
-     --data-binary @myfile.jpg \
-     http://localhost:8081/v1/upload
-```
-
-Ответ:
-
-```json
-{"image":"59c268fe-4b28-48fc-9bae-d6ce9f612e97.jpg"}
-```
+![Alt text](images/3.png)
 
 #### 3. Получение файла (защищённый, требуется токен)
 
-```bash
-curl -X GET \
-     -H 'Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJib2IifQ.hiMVLmssoTsy1MqbmIoviDeFPvo-nCd92d4UFiN2O2I' \
-     http://localhost:8081/v1/user/59c268fe-4b28-48fc-9bae-d6ce9f612e97.jpg \
-     -o downloaded.jpg
-```
-
-Проверка целостности:
-
-```bash
-cmp myfile.jpg downloaded.jpg && echo OK
-```
-
-Вывод:
-
-```
-OK
-```
+![Alt text](images/4.png)
 
 Файлы идентичны байт-в-байт — цепочка `nginx → minio GET /images/{image}` работает корректно.
 
+![Alt text](images/5.png)
+
 #### 4. Отрицательные сценарии (доказывают, что `auth_request` защищает ресурсы)
 
-```bash
 # GET без токена → 401
-curl -i http://localhost:8081/v1/user
+
+![Alt text](images/6.png)
 
 # GET с мусорным токеном → 401
-curl -i -H 'Authorization: Bearer garbage' \
-     http://localhost:8081/v1/user/59c268fe-4b28-48fc-9bae-d6ce9f612e97.jpg
-```
+
+![Alt text](images/7.png)
 
 Оба запроса возвращают `HTTP/1.1 401 Unauthorized` — NGINX отклоняет их ещё до обращения к бэкенду, что подтверждает корректную работу проверки аутентификации на уровне шлюза.
 
